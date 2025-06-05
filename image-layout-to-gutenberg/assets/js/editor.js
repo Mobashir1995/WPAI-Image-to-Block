@@ -67,9 +67,29 @@ const AiLayoutSidebar = () => {
         .then(data => {
             setIsUploading(false);
             if (data.success) {
-                setFeedbackMessage(__("Upload successful! Image ID: ", "image-layout-to-gutenberg") + data.data.image_id);
-                // TODO: Trigger AI analysis with data.data.image_url or data.data.image_id
+                // Original success message line suppressed by new block insertion logic
+                // setFeedbackMessage(__("Upload successful! Image ID: ", "image-layout-to-gutenberg") + data.data.image_id);
                 console.log("Image uploaded:", data.data);
+                // Check if we have blocks_data
+                if (data.data.blocks_data && Array.isArray(data.data.blocks_data) && data.data.blocks_data.length > 0) {
+                    try {
+                        // Attempt to create blocks from the received data
+                        // The structure from MockAIAnalyzer is: { type: "core/paragraph", attributes: { content: "..." } }
+                        // wp.blocks.createBlock might be needed if direct insertion of this structure is not robust.
+                        // For now, assuming data.data.blocks_data is an array of block objects ready for insertion.
+                        // const freshBlocks = data.data.blocks_data.map(blockData => wp.blocks.createBlock(blockData.type, blockData.attributes, blockData.innerBlocks || []));
+                        // wp.data.dispatch("core/block-editor").insertBlocks(freshBlocks);
+
+                        // Direct insertion if the structure is already compatible (worth trying first)
+                        wp.data.dispatch("core/block-editor").insertBlocks(data.data.blocks_data);
+                        setFeedbackMessage(__("Blocks inserted from image layout!", "image-layout-to-gutenberg"));
+                    } catch (e) {
+                        console.error("Error inserting blocks:", e);
+                        setFeedbackMessage(__("Upload successful, but failed to insert blocks: ", "image-layout-to-gutenberg") + e.message);
+                    }
+                } else {
+                    setFeedbackMessage(__("Upload successful, but no block data received from AI.", "image-layout-to-gutenberg"));
+                }
             } else {
                 setFeedbackMessage(__("Upload failed: ", "image-layout-to-gutenberg") + (data.data || __("Unknown error", "image-layout-to-gutenberg")));
                 console.error("Upload failed:", data.data);

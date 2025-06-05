@@ -49,11 +49,24 @@ function ilg_handle_image_layout_upload() {
         $attach_data = wp_generate_attachment_metadata( $attach_id, $movefile["file"] );
         wp_update_attachment_metadata( $attach_id, $attach_data );
 
+        // Instantiate the AI Analyzer and get block data
+        // Ensure MockAIAnalyzer and its interface are loaded via main plugin file.
+        $analyzer = new MockAIAnalyzer();
+        $blocks_data = array(); // Initialize to empty array
+        try {
+            $blocks_data = $analyzer->analyzeImage($attach_id);
+        } catch (Exception $e) {
+            // Optionally log the error or send a specific error response if AI fails
+            // For now, we proceed with empty blocks_data if AI fails
+            error_log("AI Analysis Error: " . $e->getMessage());
+        }
+
         wp_send_json_success( array(
-            "message"   => __( "File uploaded successfully!", "image-layout-to-gutenberg" ),
-            "image_id"  => $attach_id,
-            "image_url" => $movefile["url"], // URL of the uploaded file
-            "file_info" => $movefile
+            "message"     => __( "File uploaded successfully! AI analysis complete (mocked).", "image-layout-to-gutenberg" ),
+            "image_id"    => $attach_id,
+            "image_url"   => $movefile["url"], // URL of the uploaded file
+            "file_info"   => $movefile,
+            "blocks_data" => $blocks_data // Added by AI
         ) );
     } else {
         wp_send_json_error( $movefile["error"], 500 );
